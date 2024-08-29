@@ -17,7 +17,6 @@ public class CustomGrabInteractable : XRGrabInteractable
     {
         base.OnSelectExited(args);
         ResetObject();
-        Debug.Log(transform.root);
     }
     public void ResetObject()
     {

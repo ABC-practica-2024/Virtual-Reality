@@ -4,7 +4,7 @@ public class XRLayerControl : MonoBehaviour
 {
     public ButtonBase hideButton; // Assign the Hide button object in the Inspector
     public ButtonBase showButton; // Assign the Show button object in the Inspector
-    [SerializeField] ///asa poti vedea in inspector 
+    [SerializeField]
     private Transform layers;
     private int currentLayer = 0; // Current layer index
 
