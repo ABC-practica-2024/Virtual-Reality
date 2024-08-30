@@ -3,7 +3,7 @@ using UnityEngine;
 public class MainMenu : MonoBehaviour
 {
     [SerializeField]
-    protected GameObject UI, SiteSection, Artifacts;
+    protected GameObject userInterface, siteSection, artefacts;
     TouchScreenKeyboard keyboard;
     private void Start()
     {
@@ -12,16 +12,16 @@ public class MainMenu : MonoBehaviour
     }
     void EnterMainMenu()
     {
-        UI.SetActive(false);
-        SiteSection.SetActive(false);
-        Artifacts.SetActive(false);
+        userInterface.SetActive(false);
+        siteSection.SetActive(false);
+        artefacts.SetActive(false);
         keyboard.active = true;
     }
     void ExitMainMenu()
     {
-        UI.SetActive(true);
-        SiteSection.SetActive(true);
-        Artifacts.SetActive(true);
+        userInterface.SetActive(true);
+        siteSection.SetActive(true);
+        artefacts.SetActive(true);
         keyboard.active = false;
     }
 }
