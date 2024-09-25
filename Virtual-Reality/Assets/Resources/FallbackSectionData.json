@@ -1,0 +1,192 @@
+{
+  "flag": true,
+  "code": 200,
+  "message": "Retrieved all sections based on params",
+  "data": {
+    "totalItems": 6,
+    "totalPages": 1,
+    "currentPage": 0,
+    "items": [
+      {
+        "id": 1,
+        "name": "Lac Iulius - Section 1",
+        "southWest": {
+          "latitude": 46.77393775817298,
+          "longitude": 23.625218422152493
+        },
+        "northWest": {
+          "latitude": 46.77392464174448,
+          "longitude": 23.625241140473058
+        },
+        "northEast": {
+          "latitude": 46.77404133632298,
+          "longitude": 23.625308514119368
+        },
+        "southEast": {
+          "latitude": 46.77405445275148,
+          "longitude": 23.625285795798803
+        },
+        "dimensions": {
+          "length": 25,
+          "width": 2,
+          "depth": 1
+        },
+        "status": "DIGGING",
+        "createdAt": "2024-09-23T12:07:03.989816",
+        "updatedAt": "2024-09-23T22:10:26.346903",
+        "siteId": 2,
+        "artifactIds": []
+      },
+      {
+        "id": 2,
+        "name": "Lac Iulius - Section 2",
+        "southWest": {
+          "latitude": 46.77395000000000,
+          "longitude": 23.62523000000000
+        },
+        "northWest": {
+          "latitude": 46.77396000000000,
+          "longitude": 23.62525000000000
+        },
+        "northEast": {
+          "latitude": 46.77406000000000,
+          "longitude": 23.62530000000000
+        },
+        "southEast": {
+          "latitude": 46.77407000000000,
+          "longitude": 23.62528000000000
+        },
+        "dimensions": {
+          "length": 30,
+          "width": 3,
+          "depth": 2
+        },
+        "status": "EXCAVATING",
+        "createdAt": "2024-09-22T15:00:00.000000",
+        "updatedAt": "2024-09-23T18:00:00.000000",
+        "siteId": 2,
+        "artifactIds": [ 1, 2 ]
+      },
+      {
+        "id": 3,
+        "name": "Lac Iulius2 - Section 1",
+        "southWest": {
+          "latitude": 46.77393775817298,
+          "longitude": 23.625218422152493
+        },
+        "northWest": {
+          "latitude": 46.77392464174448,
+          "longitude": 23.625241140473058
+        },
+        "northEast": {
+          "latitude": 46.77404133632298,
+          "longitude": 23.625308514119368
+        },
+        "southEast": {
+          "latitude": 46.77405445275148,
+          "longitude": 23.625285795798803
+        },
+        "dimensions": {
+          "length": 25,
+          "width": 2,
+          "depth": 3
+        },
+        "status": "DIGGING",
+        "createdAt": "2024-09-23T22:12:13.756797",
+        "updatedAt": "2024-09-24T00:15:21.156323",
+        "siteId": 3,
+        "artifactIds": [ 3 ]
+      },
+      {
+        "id": 4,
+        "name": "Lac Iulius2 - Section 2",
+        "southWest": {
+          "latitude": 46.77394000000000,
+          "longitude": 23.62522000000000
+        },
+        "northWest": {
+          "latitude": 46.77392000000000,
+          "longitude": 23.62524000000000
+        },
+        "northEast": {
+          "latitude": 46.77405000000000,
+          "longitude": 23.62531000000000
+        },
+        "southEast": {
+          "latitude": 46.77406000000000,
+          "longitude": 23.62529000000000
+        },
+        "dimensions": {
+          "length": 20,
+          "width": 4,
+          "depth": 1.5
+        },
+        "status": "IN_PROGRESS",
+        "createdAt": "2024-09-20T10:00:00.000000",
+        "updatedAt": "2024-09-21T12:00:00.000000",
+        "siteId": 3,
+        "artifactIds": [ 4, 5 ]
+      },
+      {
+        "id": 5,
+        "name": "Old Roman Ruins - Section 1",
+        "southWest": {
+          "latitude": 45.75123456789012,
+          "longitude": 21.23456789012345
+        },
+        "northWest": {
+          "latitude": 45.75125000000000,
+          "longitude": 21.23458000000000
+        },
+        "northEast": {
+          "latitude": 45.75130000000000,
+          "longitude": 21.23465000000000
+        },
+        "southEast": {
+          "latitude": 45.75128000000000,
+          "longitude": 21.23463000000000
+        },
+        "dimensions": {
+          "length": 40,
+          "width": 6,
+          "depth": 2
+        },
+        "status": "EXPLORING",
+        "createdAt": "2024-09-15T09:00:00.000000",
+        "updatedAt": "2024-09-20T11:00:00.000000",
+        "siteId": 4,
+        "artifactIds": [ 6 ]
+      },
+      {
+        "id": 6,
+        "name": "Old Roman Ruins - Section 2",
+        "southWest": {
+          "latitude": 45.75124000000000,
+          "longitude": 21.23457000000000
+        },
+        "northWest": {
+          "latitude": 45.75126000000000,
+          "longitude": 21.23459000000000
+        },
+        "northEast": {
+          "latitude": 45.75131000000000,
+          "longitude": 21.23467000000000
+        },
+        "southEast": {
+          "latitude": 45.75130000000000,
+          "longitude": 21.23465000000000
+        },
+        "dimensions": {
+          "length": 50,
+          "width": 5,
+          "depth": 3
+        },
+        "status": "EXCAVATING",
+        "createdAt": "2024-09-18T13:00:00.000000",
+        "updatedAt": "2024-09-23T14:30:00.000000",
+        "siteId": 4,
+        "artifactIds": [ 7, 8 ]
+      }
+    ]
+  }
+}

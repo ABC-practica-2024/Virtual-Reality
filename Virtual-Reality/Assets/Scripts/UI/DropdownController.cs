@@ -1,189 +1,399 @@
 using UnityEngine;
-using TMPro; // Import the TextMeshPro namespace
+using TMPro;
 using System.Collections.Generic;
-using UnityEngine.Android;
+using UnityEngine.Networking;
+using System.Collections;
+using System.Text;
+using Newtonsoft.Json;
+using System;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 public class TMPDropdownManager : MonoBehaviour
 {
-    // Public fields to assign in the Inspector
     public TMP_Dropdown dropdown1;
+    public TMP_InputField filterInput;
     public TMP_Dropdown dropdown2;
-    public TMP_InputField filterInput; // New TMP_InputField for filtering
-    public GameObject parentObject;
 
-    private List<Transform> childTransforms = new List<Transform>();
-    private List<string> currentNephewOptions = new List<string>(); // Store the current nephew options
-    public string SHOW_ALL_OPTION = "Show all";
+    [SerializeField]
+    private TextAsset fallbackSiteData; // Assign this in the Unity Inspector
+
+    [SerializeField]
+    private TextAsset fallbackSectionData; // Assign this in the Unity Inspector
+
+    private List<Site> sites = new List<Site>();
+    private Dictionary<int, Site> siteDictionary = new Dictionary<int, Site>();
+    private List<string> siteNames = new List<string>();
+    private List<Section> fallbackSections = new List<Section>();
+
+    private string loginUrl = "http://pd-structuri.ro:8081/api/v1/auth/login";
+    private string siteUrl = "http://pd-structuri.ro:8081/api/arheo/site";
+    private string authToken = "";
+
+    private bool isDefaultOptionActive = true;  // To track if "Choose a site" option is active
+
+    [Serializable]
+    private class LoginRequest
+    {
+        public string username;
+        public string password;
+    }
+
+    // Adjusted API response class for `getSites`
+    [Serializable]
+    private class SiteResponse
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public List<Site> data;  // Adjusted to hold a list of Site objects
+    }
+
+    [Serializable]
+    public class Site
+    {
+        public int id;
+        public string title;
+        public string description;
+        public Coordinate centralCoordinate;
+        public List<PerimeterCoordinate> perimeterCoordinates;
+        public string status;
+        public int mainArchaeologistID;
+        public List<int> sectionsIds;
+        public List<int> archaeologistsIds;
+    }
+
+    [Serializable]
+    private class SectionArrayResponse
+    {
+        public List<Section> sections; // Adjust to match your JSON structure
+    }
+
+    // Adjusted API response class for `getSections{ID}`
+    [Serializable]
+    private class SectionResponse
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public Section data;
+    }
+
+    [Serializable]
+    private class Section
+    {
+        public int id;
+        public string name;
+        public Coordinate southWest;
+        public Coordinate northWest;
+        public Coordinate northEast;
+        public Coordinate southEast;
+        public string status;
+        public DateTime createdAt;
+        public DateTime updatedAt;
+        public int siteId;
+        public List<int> artifactIds;
+    }
+
+    [Serializable]
+    public class Coordinate
+    {
+        public float latitude;
+        public float longitude;
+    }
+
+    [Serializable]
+    public class PerimeterCoordinate : Coordinate
+    {
+        public int orderIndex;
+    }
 
     void Start()
     {
-        Debug.Log("Implement a load method, that reads the required data from a json");
-        // Initialize dropdown1 with the direct children of parentObject
-        InitializeDropdown1();
+        StartCoroutine(LoginAndFetchSites());
 
-        // Add listener for dropdown1 selection change
-        dropdown1.onValueChanged.AddListener(delegate { OnDropdown1ValueChanged(dropdown1); });
+        // Listen for changes in the dropdowns
+        filterInput.onValueChanged.AddListener(delegate { ApplyFilter(); });
+        dropdown1.onValueChanged.AddListener(delegate { OnDropdown1ValueChanged(dropdown1.value); });
 
-        // Add listener for input field changes
-        filterInput.onValueChanged.AddListener(delegate { OnFilterInputChanged(filterInput); });
-
-        // Add listener for dropdown2 selection change
-        dropdown2.onValueChanged.AddListener(delegate { OnDropdown2ValueChanged(dropdown2); });
+        // Load fallback section data
+        if (fallbackSectionData != null)
+        {
+            ProcessFallbackSectionData(fallbackSectionData.text);
+        }
     }
 
-    void InitializeDropdown1()
+    IEnumerator LoginAndFetchSites()
     {
-        if (parentObject != null)
+        yield return StartCoroutine(AttemptLogin());
+        if (!string.IsNullOrEmpty(authToken))
         {
-            // Clear previous options
-            dropdown1.ClearOptions();
+            yield return StartCoroutine(FetchSites()); // Fetch data from the server
+        }
+    }
 
-            // Get all child objects of parentObject
-            Transform[] children = parentObject.GetComponentsInChildren<Transform>(true);
+    IEnumerator AttemptLogin()
+    {
+        LoginRequest loginRequest = new LoginRequest
+        {
+            username = "catalin1",
+            password = "catalin1"
+        };
+        string jsonLogin = JsonUtility.ToJson(loginRequest);
 
-            // List to store names of direct children
-            List<string> childOptions = new List<string> { SHOW_ALL_OPTION }; // Add "Show all" option first
+        using (UnityWebRequest request = new UnityWebRequest(loginUrl, "POST"))
+        {
+            byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonLogin);
+            request.uploadHandler = new UploadHandlerRaw(bodyRaw);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SetRequestHeader("Content-Type", "application/json");
 
-            // Populate childTransforms and childOptions lists
-            foreach (Transform child in children)
+            yield return request.SendWebRequest();
+
+            ProcessLoginResponse(request);
+        }
+    }
+
+    void ProcessLoginResponse(UnityWebRequest request)
+    {
+        if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
+        {
+            try
             {
-                if (child.parent == parentObject.transform)
+                var responseJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.downloadHandler.text);
+
+                if (responseJson != null)
                 {
-                    // Direct child of the parentObject
-                    childTransforms.Add(child);
-                    childOptions.Add(child.gameObject.name);
+                    if (responseJson.TryGetValue("data", out object dataObj))
+                    {
+                        if (dataObj is string token)
+                        {
+                            authToken = token;
+                            Debug.Log("Login successful. Token received.");
+                        }
+                        else if (dataObj is JObject dataJObject)
+                        {
+                            var tokenProp = dataJObject.Properties().FirstOrDefault(p => p.Name.ToLower().Contains("token"));
+                            if (tokenProp != null)
+                            {
+                                authToken = tokenProp.Value.ToString();
+                                Debug.Log("Login successful. Token extracted from data object.");
+                            }
+                            else
+                            {
+                                Debug.LogWarning("Login response contains a data object, but no token found.");
+                            }
+                        }
+                    }
+
+                    if (string.IsNullOrEmpty(authToken))
+                    {
+                        Debug.LogError("Failed to extract auth token from response.");
+                        Debug.Log($"Full response: {JsonConvert.SerializeObject(responseJson, Formatting.Indented)}");
+                    }
                 }
             }
-
-            // Populate dropdown1 with the names of direct children and "Show all"
-            dropdown1.AddOptions(childOptions);
-
-            // Initialize dropdown2 to show all nephew objects by default
-            UpdateDropdown2(null);
+            catch (JsonException e)
+            {
+                Debug.LogError($"Error parsing login response: {e.Message}");
+                Debug.LogError($"Raw response: {request.downloadHandler.text}");
+            }
         }
         else
         {
-            Debug.LogError("Parent Object is not assigned!");
+            Debug.LogError($"Login request failed. Status: {request.responseCode}, Error: {request.error}");
         }
     }
 
-    // Update dropdown2 based on the selected child object
-    void UpdateDropdown2(Transform selectedChild)
+    IEnumerator FetchSectionsBySite(List<int> sectionIds)
     {
-        currentNephewOptions.Clear(); // Clear current options list
+        List<string> sectionNames = new List<string>();
 
-        if (selectedChild == null)
+        foreach (int sectionId in sectionIds)
         {
-            // "Show all" is selected or dropdown2 needs to show all options
-            foreach (Transform child in childTransforms)
+            string url = $"http://pd-structuri.ro:8081/api/arheo/sections/{sectionId}";
+
+            using (UnityWebRequest request = UnityWebRequest.Get(url))
             {
-                foreach (Transform grandchild in child)
+                request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+                yield return request.SendWebRequest();
+
+                if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
                 {
-                    currentNephewOptions.Add(grandchild.gameObject.name);
+                    try
+                    {
+                        var sectionResponse = JsonConvert.DeserializeObject<SectionResponse>(request.downloadHandler.text);
+                        if (sectionResponse != null && sectionResponse.data != null)
+                        {
+                            sectionNames.Add(sectionResponse.data.name);
+                        }
+                    }
+                    catch (JsonException e)
+                    {
+                        Debug.LogError($"Error parsing section response: {e.Message}");
+                    }
                 }
+                else
+                {
+                    Debug.LogError($"Failed to fetch section ID: {sectionId}. Status: {request.responseCode}, Error: {request.error}");
+                }
+            }
+        }
+
+        if (sectionNames.Count > 0)
+        {
+            dropdown2.ClearOptions();
+            dropdown2.AddOptions(sectionNames);
+        }
+        else
+        {
+            Debug.LogWarning("No sections found for the selected site.");
+        }
+    }
+
+    IEnumerator FetchSites()
+    {
+        dropdown1.ClearOptions();
+        dropdown1.AddOptions(new List<string> { "Attempting to access server..." });
+
+        int page = 0;
+        int size = 10;
+        string url = $"{siteUrl}?page={page}&size={size}";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
+            {
+                try
+                {
+                    var response = JsonConvert.DeserializeObject<SiteResponse>(request.downloadHandler.text);
+                    if (response.flag && response.data != null)
+                    {
+                        sites = response.data;
+                        siteDictionary = sites.ToDictionary(site => site.id);
+                        PopulateDropdown1();
+                    }
+                    else
+                    {
+                        Debug.LogWarning("API response was not successful.");
+                        UseFallbackData();
+                    }
+                }
+                catch (JsonException e)
+                {
+                    Debug.LogError($"Error deserializing response: {e.Message}");
+                    UseFallbackData();
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to fetch sites. Status code: {request.responseCode}");
+                UseFallbackData();
+            }
+        }
+    }
+
+    void PopulateDropdown1()
+    {
+        dropdown1.ClearOptions();
+        siteNames.Clear();
+
+        // Add the default option "Choose a site"
+        siteNames.Add("Choose a site");
+
+        foreach (Site site in sites)
+        {
+            siteNames.Add(site.title);
+        }
+
+        dropdown1.AddOptions(siteNames);
+        isDefaultOptionActive = true;
+    }
+
+    void OnDropdown1ValueChanged(int index)
+    {
+        Debug.Log($"Dropdown1 selected index: {index}, isDefaultActive: {isDefaultOptionActive}");
+
+        if (index == 0)
+        {
+            // "Choose a site" is selected, clear dropdown2 options
+            dropdown2.ClearOptions();
+            isDefaultOptionActive = true; // Keep track that default option is active
+        }
+        else
+        {
+            // Retrieve the actual site ID and load sections by site ID
+            string selectedSite = siteNames[index];
+            var site = sites.FirstOrDefault(s => s.title == selectedSite);
+            if (site != null)
+            {
+                StartCoroutine(FetchSectionsBySite(site.sectionsIds));
+            }
+        }
+    }
+
+    void UseFallbackData()
+    {
+        if (fallbackSiteData != null)
+        {
+            try
+            {
+                var response = JsonConvert.DeserializeObject<SiteResponse>(fallbackSiteData.text);
+                if (response.data != null)
+                {
+                    sites = response.data;
+                    siteDictionary = sites.ToDictionary(site => site.id);
+                    PopulateDropdown1();
+                }
+                else
+                {
+                    Debug.LogWarning("Failed to use fallback data. No sites found.");
+                }
+            }
+            catch (JsonException e)
+            {
+                Debug.LogError($"Error parsing fallback data: {e.Message}");
             }
         }
         else
         {
-            // Specific child is selected
-            foreach (Transform grandchild in selectedChild)
-            {
-                currentNephewOptions.Add(grandchild.gameObject.name);
-            }
-        }
-
-        // Apply the current filter to update dropdown2
-        ApplyFilter();
-    }
-
-    // Listener method called when dropdown1's value changes
-    void OnDropdown1ValueChanged(TMP_Dropdown change)
-    {
-        int selectedIndex = change.value;
-
-        if (selectedIndex == 0)
-        {
-            // "Show all" option selected
-            UpdateDropdown2(null);
-        }
-        else if (selectedIndex <= childTransforms.Count)
-        {
-            // Update dropdown2 based on the new selection in dropdown1
-            UpdateDropdown2(childTransforms[selectedIndex - 1]);
+            Debug.LogWarning("Fallback data is not provided.");
         }
     }
 
-    // Listener method called when dropdown2's value changes (does nothing)
-    void OnDropdown2ValueChanged(TMP_Dropdown change)
-    {
-        /* Empty Method
-         * Activates when dropdown2 value changes
-         * TODO
-         * Destroy currently generated Section
-         * Construct the new selected Section
-         */
-        Debug.Log("Implement section destruction and construction");
-    }
-
-    // Listener method called when filter input field changes
-    void OnFilterInputChanged(TMP_InputField input)
-    {
-        // Apply the filter based on the input text
-        ApplyFilter();
-    }
-
-    // Method to apply the current filter to dropdown2
     void ApplyFilter()
     {
-        string filterText = filterInput.text.ToLower(); // Get the text from the input field and convert to lowercase
-        List<string> filteredOptions = new List<string>();
+        string filterText = filterInput.text.ToLower();
 
-        // Filter options based on input field text
-        foreach (string option in currentNephewOptions)
+        if (!string.IsNullOrEmpty(filterText))
         {
-            if (option.ToLower().Contains(filterText))
-            {
-                filteredOptions.Add(option);
-            }
+            var filteredOptions = siteNames.Where(siteName => siteName.ToLower().Contains(filterText)).ToList();
+            dropdown1.ClearOptions();
+            dropdown1.AddOptions(filteredOptions);
         }
-
-        // Update dropdown2 with the filtered options
-        dropdown2.ClearOptions();
-        dropdown2.AddOptions(filteredOptions);
-
-        // Refresh dropdown2 if it's currently open
-        if (dropdown2.gameObject.activeInHierarchy && dropdown2.transform.childCount > 0)
+        else
         {
-            StartCoroutine(RefreshDropdown(dropdown2));
+            dropdown1.ClearOptions();
+            dropdown1.AddOptions(siteNames);
         }
     }
 
-    bool IsDropdownExpanded(TMP_Dropdown dropdown)
+    void ProcessFallbackSectionData(string jsonData)
     {
-        // TMP_Dropdown has a dropdownList GameObject when expanded
-        if (dropdown.transform.childCount > 0)
+        try
         {
-            Transform dropdownList = dropdown.transform.Find("Dropdown List");
-            if (dropdownList != null)
+            var sectionArrayResponse = JsonConvert.DeserializeObject<SectionArrayResponse>(jsonData);
+            if (sectionArrayResponse != null && sectionArrayResponse.sections != null)
             {
-                return dropdownList.gameObject.activeSelf; // Return true if the dropdown is expanded
+                fallbackSections = sectionArrayResponse.sections;
             }
         }
-        return false; // Dropdown is not expanded
-    }
-
-    // Coroutine to refresh TMP_Dropdown (closes and reopens to refresh options)
-    System.Collections.IEnumerator RefreshDropdown(TMP_Dropdown dropdown)
-    {
-        // Wait until the end of the frame to avoid UI update conflicts
-        yield return new WaitForEndOfFrame();
-
-        // Only refresh and reopen the dropdown if it's currently expanded
-        if (IsDropdownExpanded(dropdown))
+        catch (JsonException e)
         {
-            dropdown.Hide();
-            yield return new WaitForEndOfFrame(); // Wait for another frame to ensure it's properly hidden
-            dropdown.Show();
+            Debug.LogError($"Error processing fallback section data: {e.Message}");
         }
     }
 }
