@@ -1,0 +1,61 @@
+{
+  "flag": true,
+  "code": 200,
+  "message": "Retrieved all sites",
+  "data": {
+    "totalItems": 3,
+    "totalPages": 1,
+    "sites": [
+      {
+        "id": 2,
+        "title": "Lac Iulius",
+        "description": "An archaeological dig near Lac Iulius.",
+        "centralCoordinate": {
+          "latitude": 46.77398954724798,
+          "longitude": 23.62519788599345
+        },
+        "perimeterCoordinates": [],
+        "status": "DIGGING",
+        "mainArchaeologistID": 11,
+        "sectionsIds": [
+          1
+        ],
+        "archaeologistsIds": []
+      },
+      {
+        "id": 3,
+        "title": "Lac Iulius2",
+        "description": "Second phase of the archaeological dig near Lac Iulius.",
+        "centralCoordinate": {
+          "latitude": 46.77400000000000,
+          "longitude": 23.62520000000000
+        },
+        "perimeterCoordinates": [],
+        "status": "DIGGING",
+        "mainArchaeologistID": 12,
+        "sectionsIds": [
+          2
+        ],
+        "archaeologistsIds": []
+      },
+      {
+        "id": 4,
+        "title": "Old Roman Ruins",
+        "description": "A site focused on excavating ancient Roman ruins.",
+        "centralCoordinate": {
+          "latitude": 45.75123456789012,
+          "longitude": 21.23456789012345
+        },
+        "perimeterCoordinates": [],
+        "status": "IN_PROGRESS",
+        "mainArchaeologistID": 13,
+        "sectionsIds": [
+          3,
+          4
+        ],
+        "archaeologistsIds": []
+      }
+    ],
+    "currentPage": 0
+  }
+}
