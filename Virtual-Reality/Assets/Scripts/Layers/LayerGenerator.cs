@@ -7,7 +7,7 @@ public class LayerGenerator : MonoBehaviour
     [SerializeField] protected Transform layerPrefab;
     [SerializeField] protected Transform layerPoolObject;
     [SerializeField] protected XRLayerControl layerControl;
-    [SerializeField] protected Queue<Transform> layerPool = new();
+    protected Queue<Transform> layerPool = new();
     protected void OnEnable()
     {
         GenerateLayers();

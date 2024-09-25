@@ -2,16 +2,17 @@ using UnityEngine;
 
 public class ArtefactGen : MonoBehaviour
 {
-    [SerializeField] protected Transform artefactHolder;
     public void CreateArtefact(GameObject model, Vector3 position, Quaternion rotation)
     {
-        Instantiate(model, position, rotation, artefactHolder);
+        Instantiate(model, position, rotation, transform);
     }
     public void DestroyArtefacts()
     {
-        for (int i = 0; i < artefactHolder.childCount; i++)
+        int i = 0;
+        while (i < transform.childCount)
         {
-            Destroy(artefactHolder.GetChild(i).gameObject);
+            Destroy(transform.GetChild(i).gameObject);
+            i++;
         }
     }
 }

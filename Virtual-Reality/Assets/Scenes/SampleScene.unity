@@ -337,6 +337,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 131951416}
+  - component: {fileID: 131951417}
   m_Layer: 0
   m_Name: Artefacts
   m_TagString: Untagged
@@ -359,6 +360,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &131951417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 131951415}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d7fafa1b11d5d64c8d5973022344bdb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &136678466
 GameObject:
   m_ObjectHideFlags: 0
@@ -1672,6 +1685,12 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 971497121}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &971497124 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 2597744957826233292, guid: 1e0afd5b227e7f949bc48e6732081b82,
+    type: 3}
+  m_PrefabInstance: {fileID: 971497121}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1005630625
 GameObject:
   m_ObjectHideFlags: 0
@@ -1804,7 +1823,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Option A
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -2568,13 +2587,7 @@ MonoBehaviour:
   m_ItemImage: {fileID: 0}
   m_Value: 0
   m_Options:
-    m_Options:
-    - m_Text: Option A
-      m_Image: {fileID: 0}
-    - m_Text: Option B
-      m_Image: {fileID: 0}
-    - m_Text: Option C
-      m_Image: {fileID: 0}
+    m_Options: []
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
@@ -2892,11 +2905,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d62a1a5f53f61f34884c73217e4e025e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  artefactHolder: {fileID: 131951417}
+  siteSection: {fileID: 971497124}
   dropdown1: {fileID: 1402623024}
   filterInput: {fileID: 1987125056}
   dropdown2: {fileID: 568375880}
-  fallbackSiteData: {fileID: 0}
-  fallbackSectionData: {fileID: 0}
 --- !u!1 &1577874663
 GameObject:
   m_ObjectHideFlags: 0

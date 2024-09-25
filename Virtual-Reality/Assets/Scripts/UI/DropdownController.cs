@@ -1,112 +1,33 @@
-using UnityEngine;
-using TMPro;
-using System.Collections.Generic;
-using UnityEngine.Networking;
-using System.Collections;
-using System.Text;
 using Newtonsoft.Json;
-using System;
-using System.Linq;
 using Newtonsoft.Json.Linq;
+using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using TMPro;
+using UnityEngine;
+using UnityEngine.Networking;
 
 public class TMPDropdownManager : MonoBehaviour
 {
-    public TMP_Dropdown dropdown1;
-    public TMP_InputField filterInput;
-    public TMP_Dropdown dropdown2;
+    [Header("Scene objects")]
+    [SerializeField] protected ArtefactGen artefactHolder;
+    [SerializeField] protected Transform siteSection;
 
-    [SerializeField]
-    private TextAsset fallbackSiteData; // Assign this in the Unity Inspector
-
-    [SerializeField]
-    private TextAsset fallbackSectionData; // Assign this in the Unity Inspector
+    [Header("UI stuff")]
+    [SerializeField] protected TMP_Dropdown dropdown1;
+    [SerializeField] protected TMP_InputField filterInput;
+    [SerializeField] protected TMP_Dropdown dropdown2;
 
     private List<Site> sites = new List<Site>();
     private Dictionary<int, Site> siteDictionary = new Dictionary<int, Site>();
     private List<string> siteNames = new List<string>();
-    private List<Section> fallbackSections = new List<Section>();
 
     private string loginUrl = "http://pd-structuri.ro:8081/api/v1/auth/login";
     private string siteUrl = "http://pd-structuri.ro:8081/api/arheo/site";
     private string authToken = "";
 
     private bool isDefaultOptionActive = true;  // To track if "Choose a site" option is active
-
-    [Serializable]
-    private class LoginRequest
-    {
-        public string username;
-        public string password;
-    }
-
-    // Adjusted API response class for `getSites`
-    [Serializable]
-    private class SiteResponse
-    {
-        public bool flag;
-        public int code;
-        public string message;
-        public List<Site> data;  // Adjusted to hold a list of Site objects
-    }
-
-    [Serializable]
-    public class Site
-    {
-        public int id;
-        public string title;
-        public string description;
-        public Coordinate centralCoordinate;
-        public List<PerimeterCoordinate> perimeterCoordinates;
-        public string status;
-        public int mainArchaeologistID;
-        public List<int> sectionsIds;
-        public List<int> archaeologistsIds;
-    }
-
-    [Serializable]
-    private class SectionArrayResponse
-    {
-        public List<Section> sections; // Adjust to match your JSON structure
-    }
-
-    // Adjusted API response class for `getSections{ID}`
-    [Serializable]
-    private class SectionResponse
-    {
-        public bool flag;
-        public int code;
-        public string message;
-        public Section data;
-    }
-
-    [Serializable]
-    private class Section
-    {
-        public int id;
-        public string name;
-        public Coordinate southWest;
-        public Coordinate northWest;
-        public Coordinate northEast;
-        public Coordinate southEast;
-        public string status;
-        public DateTime createdAt;
-        public DateTime updatedAt;
-        public int siteId;
-        public List<int> artifactIds;
-    }
-
-    [Serializable]
-    public class Coordinate
-    {
-        public float latitude;
-        public float longitude;
-    }
-
-    [Serializable]
-    public class PerimeterCoordinate : Coordinate
-    {
-        public int orderIndex;
-    }
 
     void Start()
     {
@@ -115,12 +36,6 @@ public class TMPDropdownManager : MonoBehaviour
         // Listen for changes in the dropdowns
         filterInput.onValueChanged.AddListener(delegate { ApplyFilter(); });
         dropdown1.onValueChanged.AddListener(delegate { OnDropdown1ValueChanged(dropdown1.value); });
-
-        // Load fallback section data
-        if (fallbackSectionData != null)
-        {
-            ProcessFallbackSectionData(fallbackSectionData.text);
-        }
     }
 
     IEnumerator LoginAndFetchSites()
@@ -279,19 +194,16 @@ public class TMPDropdownManager : MonoBehaviour
                     else
                     {
                         Debug.LogWarning("API response was not successful.");
-                        UseFallbackData();
                     }
                 }
                 catch (JsonException e)
                 {
                     Debug.LogError($"Error deserializing response: {e.Message}");
-                    UseFallbackData();
                 }
             }
             else
             {
                 Debug.LogError($"Failed to fetch sites. Status code: {request.responseCode}");
-                UseFallbackData();
             }
         }
     }
@@ -334,36 +246,6 @@ public class TMPDropdownManager : MonoBehaviour
             }
         }
     }
-
-    void UseFallbackData()
-    {
-        if (fallbackSiteData != null)
-        {
-            try
-            {
-                var response = JsonConvert.DeserializeObject<SiteResponse>(fallbackSiteData.text);
-                if (response.data != null)
-                {
-                    sites = response.data;
-                    siteDictionary = sites.ToDictionary(site => site.id);
-                    PopulateDropdown1();
-                }
-                else
-                {
-                    Debug.LogWarning("Failed to use fallback data. No sites found.");
-                }
-            }
-            catch (JsonException e)
-            {
-                Debug.LogError($"Error parsing fallback data: {e.Message}");
-            }
-        }
-        else
-        {
-            Debug.LogWarning("Fallback data is not provided.");
-        }
-    }
-
     void ApplyFilter()
     {
         string filterText = filterInput.text.ToLower();
@@ -378,22 +260,6 @@ public class TMPDropdownManager : MonoBehaviour
         {
             dropdown1.ClearOptions();
             dropdown1.AddOptions(siteNames);
-        }
-    }
-
-    void ProcessFallbackSectionData(string jsonData)
-    {
-        try
-        {
-            var sectionArrayResponse = JsonConvert.DeserializeObject<SectionArrayResponse>(jsonData);
-            if (sectionArrayResponse != null && sectionArrayResponse.sections != null)
-            {
-                fallbackSections = sectionArrayResponse.sections;
-            }
-        }
-        catch (JsonException e)
-        {
-            Debug.LogError($"Error processing fallback section data: {e.Message}");
         }
     }
 }
