@@ -4,26 +4,26 @@ using UnityEngine;
 
 public class VisibilityControls : MonoBehaviour
 {
-    public GameObject InteractableControlMainMenu;
-    public GameObject InteractableControlsGame;
+    public GameObject CanvasMainMeniu;
+    public GameObject CanvasSite;
 
     public void SelectButton()
     {   
         //Makes the MainMenu Invisible
-        InteractableControlMainMenu.SetActive(false);
+        CanvasMainMeniu.SetActive(false);
 
-        //Makes the game buttons visible
-        InteractableControlsGame.SetActive(true);
+        //Makes the site buttons visible
+        CanvasSite.SetActive(true);
 
     }
 
     public void MainMenuButton()
     {
         //Makes the MainMenu visible
-        InteractableControlMainMenu.SetActive(true);
+        CanvasMainMeniu.SetActive(true);
 
         //Makes the game buttons invisible
-        InteractableControlsGame.SetActive(false);
+        CanvasSite.SetActive(false);
 
     }
 
