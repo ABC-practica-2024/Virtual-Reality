@@ -1,41 +1,149 @@
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using TMPro;
 using UnityEngine;
+using TMPro;
+using System.Collections.Generic;
 using UnityEngine.Networking;
+using System.Collections;
+using System.Text;
+using Newtonsoft.Json;
+using System.Linq;
+using Newtonsoft.Json.Linq;
 
 public class TMPDropdownManager : MonoBehaviour
 {
-    [Header("Scene objects")]
-    [SerializeField] protected ArtefactGen artefactHolder;
-    [SerializeField] protected Transform siteSection;
+    [Header("Dropdowns")]
+    public TMP_Dropdown siteDropdown; // Assign in the Inspector
+    public TMP_Dropdown sectionDropdown; // Assign in the Inspector
 
-    [Header("UI stuff")]
-    [SerializeField] protected TMP_Dropdown dropdown1;
-    [SerializeField] protected TMP_InputField filterInput;
-    [SerializeField] protected TMP_Dropdown dropdown2;
+    [Header("Game Objects")]
+    public Transform Planes; // Change to Transform to directly manipulate its scale
+    public GameObject sampleArtifact; // Prefab reference for artifacts
 
     private List<Site> sites = new List<Site>();
-    private Dictionary<int, Site> siteDictionary = new Dictionary<int, Site>();
-    private List<string> siteNames = new List<string>();
+    private List<Section> sections = new List<Section>(); // New list to hold sections
+    private List<GameObject> loadedArtifacts = new List<GameObject>(); // List to keep track of instantiated artifacts
 
     private string loginUrl = "http://pd-structuri.ro:8081/api/v1/auth/login";
     private string siteUrl = "http://pd-structuri.ro:8081/api/arheo/site";
     private string authToken = "";
 
-    private bool isDefaultOptionActive = true;  // To track if "Choose a site" option is active
+    // Classes for API responses
+    [System.Serializable]
+    private class LoginRequest
+    {
+        public string username;
+        public string password;
+    }
+
+    [System.Serializable]
+    private class SiteResponse
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public SiteData data;
+    }
+
+    [System.Serializable]
+    private class SiteData
+    {
+        public List<Site> sites;
+    }
+
+    [System.Serializable]
+    public class Site
+    {
+        public int id;          // ID for requesting sections
+        public string title;    // Name for displaying in the dropdown
+    }
+
+    [System.Serializable]
+    private class SectionResponse
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public SectionData data;
+    }
+
+    [System.Serializable]
+    private class SectionData
+    {
+        public List<Section> sites; // Must remain 'sites' as per requirements
+    }
+
+    [System.Serializable]
+    public class Section
+    {
+        public int id;
+        public string name;
+    }
+
+    [System.Serializable]
+    public class SectionDetails
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public SectionDataDetails data;
+    }
+
+    [System.Serializable]
+    public class SectionDataDetails
+    {
+        public Dimensions dimensions;
+        public string status;
+        public int siteId;
+    }
+
+    [System.Serializable]
+    public class Dimensions
+    {
+        public float length; // X
+        public float width;  // Z
+        public float depth;  // Y
+    }
+
+    [System.Serializable]
+    private class ArtifactsResponse
+    {
+        public bool flag;
+        public int code;
+        public string message;
+        public List<Artifact> data; // Changed to hold a list of artifacts
+    }
+
+    [System.Serializable]
+    public class Artifact
+    {
+        public int id;
+        public Dimensions artifactDimension;
+        public Position artifactPosition;
+        public Rotation artifactRotation;
+        public string label;
+        public string category;
+    }
+
+    [System.Serializable]
+    public class Position
+    {
+        public float latitude;
+        public float longitude;
+        public float depth;
+    }
+
+    [System.Serializable]
+    public class Rotation
+    {
+        public float pitch;
+        public float yaw;
+        public float roll;
+    }
 
     void Start()
     {
         StartCoroutine(LoginAndFetchSites());
-
-        // Listen for changes in the dropdowns
-        filterInput.onValueChanged.AddListener(delegate { ApplyFilter(); });
-        dropdown1.onValueChanged.AddListener(delegate { OnDropdown1ValueChanged(dropdown1.value); });
+        siteDropdown.onValueChanged.AddListener(OnSiteDropdownValueChanged);
+        sectionDropdown.onValueChanged.AddListener(OnSectionSelected);
     }
 
     IEnumerator LoginAndFetchSites()
@@ -43,17 +151,13 @@ public class TMPDropdownManager : MonoBehaviour
         yield return StartCoroutine(AttemptLogin());
         if (!string.IsNullOrEmpty(authToken))
         {
-            yield return StartCoroutine(FetchSites()); // Fetch data from the server
+            yield return StartCoroutine(FetchSites());
         }
     }
 
     IEnumerator AttemptLogin()
     {
-        LoginRequest loginRequest = new LoginRequest
-        {
-            username = "catalin1",
-            password = "catalin1"
-        };
+        LoginRequest loginRequest = new LoginRequest { username = "catalin1", password = "catalin1" };
         string jsonLogin = JsonUtility.ToJson(loginRequest);
 
         using (UnityWebRequest request = new UnityWebRequest(loginUrl, "POST"))
@@ -65,115 +169,27 @@ public class TMPDropdownManager : MonoBehaviour
 
             yield return request.SendWebRequest();
 
-            ProcessLoginResponse(request);
-        }
-    }
-
-    void ProcessLoginResponse(UnityWebRequest request)
-    {
-        if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
-        {
-            try
+            if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
             {
                 var responseJson = JsonConvert.DeserializeObject<Dictionary<string, object>>(request.downloadHandler.text);
-
-                if (responseJson != null)
+                if (responseJson.TryGetValue("data", out object dataObj))
                 {
-                    if (responseJson.TryGetValue("data", out object dataObj))
-                    {
-                        if (dataObj is string token)
-                        {
-                            authToken = token;
-                            Debug.Log("Login successful. Token received.");
-                        }
-                        else if (dataObj is JObject dataJObject)
-                        {
-                            var tokenProp = dataJObject.Properties().FirstOrDefault(p => p.Name.ToLower().Contains("token"));
-                            if (tokenProp != null)
-                            {
-                                authToken = tokenProp.Value.ToString();
-                                Debug.Log("Login successful. Token extracted from data object.");
-                            }
-                            else
-                            {
-                                Debug.LogWarning("Login response contains a data object, but no token found.");
-                            }
-                        }
-                    }
-
-                    if (string.IsNullOrEmpty(authToken))
-                    {
-                        Debug.LogError("Failed to extract auth token from response.");
-                        Debug.Log($"Full response: {JsonConvert.SerializeObject(responseJson, Formatting.Indented)}");
-                    }
+                    authToken = dataObj is string token ? token : ((JObject)dataObj).Value<string>("token");
                 }
             }
-            catch (JsonException e)
+            else
             {
-                Debug.LogError($"Error parsing login response: {e.Message}");
-                Debug.LogError($"Raw response: {request.downloadHandler.text}");
+                Debug.LogError("Login failed. Error: " + request.error);
             }
-        }
-        else
-        {
-            Debug.LogError($"Login request failed. Status: {request.responseCode}, Error: {request.error}");
-        }
-    }
-
-    IEnumerator FetchSectionsBySite(List<int> sectionIds)
-    {
-        List<string> sectionNames = new List<string>();
-
-        foreach (int sectionId in sectionIds)
-        {
-            string url = $"http://pd-structuri.ro:8081/api/arheo/sections/{sectionId}";
-
-            using (UnityWebRequest request = UnityWebRequest.Get(url))
-            {
-                request.SetRequestHeader("Authorization", $"Bearer {authToken}");
-                yield return request.SendWebRequest();
-
-                if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
-                {
-                    try
-                    {
-                        var sectionResponse = JsonConvert.DeserializeObject<SectionResponse>(request.downloadHandler.text);
-                        if (sectionResponse != null && sectionResponse.data != null)
-                        {
-                            sectionNames.Add(sectionResponse.data.name);
-                        }
-                    }
-                    catch (JsonException e)
-                    {
-                        Debug.LogError($"Error parsing section response: {e.Message}");
-                    }
-                }
-                else
-                {
-                    Debug.LogError($"Failed to fetch section ID: {sectionId}. Status: {request.responseCode}, Error: {request.error}");
-                }
-            }
-        }
-
-        if (sectionNames.Count > 0)
-        {
-            dropdown2.ClearOptions();
-            dropdown2.AddOptions(sectionNames);
-        }
-        else
-        {
-            Debug.LogWarning("No sections found for the selected site.");
         }
     }
 
     IEnumerator FetchSites()
     {
-        dropdown1.ClearOptions();
-        dropdown1.AddOptions(new List<string> { "Attempting to access server..." });
+        siteDropdown.ClearOptions();
+        siteDropdown.AddOptions(new List<string> { "Attempting to access server..." });
 
-        int page = 0;
-        int size = 10;
-        string url = $"{siteUrl}?page={page}&size={size}";
+        string url = $"{siteUrl}?page=0&size=10";
 
         using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
@@ -182,84 +198,151 @@ public class TMPDropdownManager : MonoBehaviour
 
             if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
             {
-                try
+                var response = JsonConvert.DeserializeObject<SiteResponse>(request.downloadHandler.text);
+                if (response.flag && response.data.sites != null)
                 {
-                    var response = JsonConvert.DeserializeObject<SiteResponse>(request.downloadHandler.text);
-                    if (response.flag && response.data != null)
-                    {
-                        sites = response.data;
-                        siteDictionary = sites.ToDictionary(site => site.id);
-                        PopulateDropdown1();
-                    }
-                    else
-                    {
-                        Debug.LogWarning("API response was not successful.");
-                    }
+                    sites = response.data.sites;
+                    PopulateSiteDropdown();
                 }
-                catch (JsonException e)
+                else
                 {
-                    Debug.LogError($"Error deserializing response: {e.Message}");
+                    Debug.LogError("Failed to fetch sites.");
                 }
             }
             else
             {
-                Debug.LogError($"Failed to fetch sites. Status code: {request.responseCode}");
+                Debug.LogError("Failed to fetch sites. Status code: " + request.responseCode);
             }
         }
     }
 
-    void PopulateDropdown1()
+    void PopulateSiteDropdown()
     {
-        dropdown1.ClearOptions();
-        siteNames.Clear();
+        siteDropdown.ClearOptions();
 
-        // Add the default option "Choose a site"
-        siteNames.Add("Choose a site");
-
-        foreach (Site site in sites)
-        {
-            siteNames.Add(site.title);
-        }
-
-        dropdown1.AddOptions(siteNames);
-        isDefaultOptionActive = true;
+        List<string> siteNames = new List<string> { "Choose a site" }; // Add a default option
+        siteNames.AddRange(sites.Select(site => site.title));
+        siteDropdown.AddOptions(siteNames);
     }
 
-    void OnDropdown1ValueChanged(int index)
+    void OnSiteDropdownValueChanged(int index)
     {
-        Debug.Log($"Dropdown1 selected index: {index}, isDefaultActive: {isDefaultOptionActive}");
-
-        if (index == 0)
+        if (index > 0) // Skip the default option
         {
-            // "Choose a site" is selected, clear dropdown2 options
-            dropdown2.ClearOptions();
-            isDefaultOptionActive = true; // Keep track that default option is active
+            var selectedSite = sites[index - 1]; // Adjust for the default option
+            StartCoroutine(FetchSectionsBySite(selectedSite.id));
         }
         else
         {
-            // Retrieve the actual site ID and load sections by site ID
-            string selectedSite = siteNames[index];
-            var site = sites.FirstOrDefault(s => s.title == selectedSite);
-            if (site != null)
+            sectionDropdown.ClearOptions();
+        }
+    }
+
+    IEnumerator FetchSectionsBySite(int siteId)
+    {
+        string url = $"http://pd-structuri.ro:8081/api/arheo/site/sections?siteId={siteId}&page=0&pageSize=10";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
+        {
+            request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
             {
-                StartCoroutine(FetchSectionsBySite(site.sectionsIds));
+                var sectionResponse = JsonConvert.DeserializeObject<SectionResponse>(request.downloadHandler.text);
+                if (sectionResponse.data.sites != null && sectionResponse.data.sites.Count > 0)
+                {
+                    sections = sectionResponse.data.sites; // Store sections here
+                    PopulateSectionDropdown(sections);
+                }
+                else
+                {
+                    Debug.LogError("No sections found for this site.");
+                    sectionDropdown.ClearOptions();
+                    sectionDropdown.AddOptions(new List<string> { "No sections found" });
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to fetch sections. Error: {request.error}");
+                sectionDropdown.ClearOptions();
+                sectionDropdown.AddOptions(new List<string> { "Error fetching sections" });
             }
         }
     }
-    void ApplyFilter()
-    {
-        string filterText = filterInput.text.ToLower();
 
-        if (!string.IsNullOrEmpty(filterText))
+    void PopulateSectionDropdown(List<Section> sections)
+    {
+        sectionDropdown.ClearOptions();
+        List<string> sectionNames = sections.Select(section => section.name).ToList();
+        sectionDropdown.AddOptions(new List<string> { "Select a section" }); // Add a default option
+        sectionDropdown.AddOptions(sectionNames);
+    }
+
+    public void OnSectionSelected(int index)
+    {
+        if (index > 0) // Skip the default option
         {
-            var filteredOptions = siteNames.Where(siteName => siteName.ToLower().Contains(filterText)).ToList();
-            dropdown1.ClearOptions();
-            dropdown1.AddOptions(filteredOptions);
+            int selectedSectionId = sections[index - 1].id; // Adjust for the default option
+            StartCoroutine(LoadArtifactsForSection(selectedSectionId));
         }
-        else
+    }
+
+    IEnumerator LoadArtifactsForSection(int sectionId)
+    {
+        // Destroy old artifacts
+        DestroyOldArtifacts();
+
+        // Fetch new artifacts
+        string url = $"http://pd-structuri.ro:8081/api/arheo/sections/{sectionId}/artifacts";
+
+        using (UnityWebRequest request = UnityWebRequest.Get(url))
         {
-            dropdown1.ClearOptions();
-            dropdown1.AddOptions(siteNames);
+            request.SetRequestHeader("Authorization", $"Bearer {authToken}");
+            yield return request.SendWebRequest();
+
+            if (request.result == UnityWebRequest.Result.Success && request.responseCode == 200)
+            {
+                var artifactResponse = JsonConvert.DeserializeObject<ArtifactsResponse>(request.downloadHandler.text);
+                if (artifactResponse.data != null && artifactResponse.data.Count > 0)
+                {
+                    foreach (var artifact in artifactResponse.data)
+                    {
+                        InstantiateArtifact(artifact);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("No artifacts found for this section.");
+                }
+            }
+            else
+            {
+                Debug.LogError($"Failed to fetch artifacts. Error: {request.error}");
+            }
         }
+    }
+
+    void DestroyOldArtifacts()
+    {
+        foreach (var artifact in loadedArtifacts)
+        {
+            Destroy(artifact);
+        }
+        loadedArtifacts.Clear(); // Clear the list after destroying old artifacts
+    }
+
+    void InstantiateArtifact(Artifact artifact)
+    {
+        // Create a new artifact instance
+        GameObject newArtifact = Instantiate(sampleArtifact);
+        newArtifact.transform.position = new Vector3(artifact.artifactPosition.longitude, artifact.artifactPosition.depth, artifact.artifactPosition.latitude); // Set position
+        newArtifact.transform.rotation = Quaternion.Euler(artifact.artifactRotation.pitch, artifact.artifactRotation.yaw, artifact.artifactRotation.roll); // Set rotation
+
+        // Optionally, you can set additional properties for the new artifact
+        // For example, set the name or any other component data
+        newArtifact.name = artifact.label;
+
+        loadedArtifacts.Add(newArtifact); // Keep track of loaded artifacts
     }
 }
