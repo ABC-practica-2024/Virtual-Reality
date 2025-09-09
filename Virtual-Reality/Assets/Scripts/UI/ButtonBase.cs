@@ -1,15 +1,17 @@
 using UnityEngine.XR.Interaction.Toolkit;
-
-public class ButtonBase : XRBaseInteractable
+namespace UI
 {
-    protected System.Action action;
-    public void AddAction(System.Action action)
+    public class ButtonBase : XRBaseInteractable
     {
-        this.action += action;
-    }
-    protected override void OnSelectEntered(SelectEnterEventArgs args)
-    {
-        base.OnSelectEntered(args);
-        action();
+        protected System.Action action;
+        public void AddAction(System.Action action)
+        {
+            this.action += action;
+        }
+        protected override void OnSelectEntered(SelectEnterEventArgs args)
+        {
+            base.OnSelectEntered(args);
+            action();
+        }
     }
 }
