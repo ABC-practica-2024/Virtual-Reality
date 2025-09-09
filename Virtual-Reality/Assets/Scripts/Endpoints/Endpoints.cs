@@ -56,10 +56,14 @@ namespace FuckingEndpoints
         {
             yield return null;
         }
-        #endregion
-        private void OnEnable()
+        public void GetSectionData(int sectionID)
         {
-            FetchSites();
+            StartCoroutine(TryGetSectionData(sectionID));
         }
+        public IEnumerator TryGetSectionData(int sectionID)
+        {
+            yield return null;
+        }
+        #endregion
     }
 }
