@@ -1,41 +1,29 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class VisibilityControls : MonoBehaviour
 {
-    public GameObject CanvasMainMeniu;
-    public GameObject CanvasSite;
-
-    public void SelectButton()
-    {   
+    [SerializeField] protected GameObject CanvasMainMenu;
+    [SerializeField] protected GameObject CanvasSite;
+    [SerializeField] protected GameObject siteSection;
+    public void OnSectionSelected()
+    {
         //Makes the MainMenu Invisible
-        CanvasMainMeniu.SetActive(false);
+        CanvasMainMenu.SetActive(false);
 
         //Makes the site buttons visible
         CanvasSite.SetActive(true);
 
+        siteSection.SetActive(true);
     }
 
     public void MainMenuButton()
     {
         //Makes the MainMenu visible
-        CanvasMainMeniu.SetActive(true);
+        CanvasMainMenu.SetActive(true);
 
         //Makes the game buttons invisible
         CanvasSite.SetActive(false);
 
-    }
-
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        siteSection.SetActive(false);
     }
 }

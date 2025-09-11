@@ -151,7 +151,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6508b3208bbd3f449eaf6bfba400c83, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  <sites>k__BackingField: []
+  baseURL: http://192.168.8.122:7112
+  sites: []
+  SitesFetched:
+    m_PersistentCalls:
+      m_Calls: []
+  sections: []
+  SectionsFetched:
+    m_PersistentCalls:
+      m_Calls: []
+  artifacts: []
+  ArtifactsFetched:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!4 &967837704
 Transform:
   m_ObjectHideFlags: 0

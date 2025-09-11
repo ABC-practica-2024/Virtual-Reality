@@ -3,16 +3,15 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Networking;
 
 namespace FuckingEndpoints
 {
     public class Endpoints : MonoBehaviour
     {
-        [field: SerializeField] public List<Site> sites { get; protected set; } = new();
-        [field: SerializeField] public List<Section> sections { get; protected set; } = new();
         #region Utils
-        protected string baseURL = "http://10.219.177.122:7112";
+        [SerializeField] protected string baseURL = "http://192.168.8.147:5146";
         protected string authToken;
         public UnityWebRequest CreateGet(string uri)
         {
@@ -22,6 +21,20 @@ namespace FuckingEndpoints
         }
         #endregion
         #region Sites
+        [SerializeField] protected List<Site> sites = new();
+        public List<Site> Sites
+        {
+            get
+            {
+                return sites;
+            }
+            protected set
+            {
+                sites = value;
+                SitesFetched?.Invoke(sites);
+            }
+        }
+        public UnityEvent<List<Site>> SitesFetched;
         public void FetchSites()
         {
             StartCoroutine(TryGetSites());
@@ -35,7 +48,7 @@ namespace FuckingEndpoints
                 {
                     try
                     {
-                        sites = JsonConvert.DeserializeObject<List<Site>>
+                        Sites = JsonConvert.DeserializeObject<List<Site>>
                         (webRequest.downloadHandler.text);
                     }
                     catch (Exception e)
@@ -48,22 +61,87 @@ namespace FuckingEndpoints
         }
         #endregion
         #region Sections
+        [SerializeField] protected List<Section> sections = new();
+        public List<Section> Sections
+        {
+            get
+            {
+                return sections;
+            }
+            protected set
+            {
+                sections = value;
+                SectionsFetched?.Invoke(sections);
+            }
+        }
+        public UnityEvent<List<Section>> SectionsFetched;
         public void FetchSections(int siteID)
         {
             StartCoroutine(TryGetSections(siteID));
         }
         public IEnumerator TryGetSections(int siteID)
         {
-            yield return null;
+            using (UnityWebRequest webRequest = CreateGet($"/sections/{siteID}"))
+            {
+                Debug.Log(siteID);
+                yield return webRequest.SendWebRequest();
+                if (webRequest != null && webRequest.result == UnityWebRequest.Result.Success)
+                {
+                    try
+                    {
+                        Sections = JsonConvert.DeserializeObject<List<Section>>
+                        (webRequest.downloadHandler.text);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Error deserializing response: {e.Message}.");
+                    }
+                }
+                else Debug.LogError($"Connection error: conection status {webRequest.result}.");
+            }
         }
-        public void GetSectionData(int sectionID)
+        #region Artifacts
+        public void FetchArtifacts(int sectionID)
         {
-            StartCoroutine(TryGetSectionData(sectionID));
+            StartCoroutine(TryFetchArtefacts(sectionID));
         }
-        public IEnumerator TryGetSectionData(int sectionID)
+        [SerializeField] protected List<Artifact> artifacts = new();
+        public List<Artifact> Artefacts
         {
-            yield return null;
+            get { return artifacts; }
+            protected set
+            {
+                artifacts = value;
+                ArtifactsFetched?.Invoke(artifacts);
+            }
+        }
+        public UnityEvent<List<Artifact>> ArtifactsFetched;
+        public IEnumerator TryFetchArtefacts(int sectionID)
+        {
+            using (UnityWebRequest webRequest = CreateGet($"/artefacts/{sectionID}"))
+            {
+                Debug.Log(sectionID);
+                yield return webRequest.SendWebRequest();
+                if (webRequest != null && webRequest.result == UnityWebRequest.Result.Success)
+                {
+                    try
+                    {
+                        Artefacts = JsonConvert.DeserializeObject<List<Artifact>>
+                        (webRequest.downloadHandler.text);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogError($"Error deserializing response: {e.Message}.");
+                    }
+                }
+                else Debug.LogError($"Connection error: conection status {webRequest.result}.");
+            }
         }
         #endregion
+        #endregion
+        private void OnEnable()
+        {
+            FetchSites();
+        }
     }
 }
